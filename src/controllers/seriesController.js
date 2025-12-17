@@ -4,11 +4,19 @@ const imagekit = require('../config/imagekit');
 
 // @desc    Get all series (with simple filters)
 // @route   GET /api/series
-// @access  Public
+// @access  Public (but 'mine' requires Auth)
 const getSeries = async (req, res) => {
-    const { filter } = req.query; // popular, new, trending
+    const { filter, mine } = req.query; // popular, new, trending, mine
     let query = {};
     let sort = { updatedAt: -1 };
+
+    // Filter by "My Series"
+    if (mine === 'true') {
+        if (!req.session.userId) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+        query.user = req.session.userId;
+    }
 
     // Basic logic for "popular" (could be view count based later)
     if (filter === 'trending') {
