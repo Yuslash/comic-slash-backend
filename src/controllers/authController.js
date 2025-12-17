@@ -86,9 +86,47 @@ const getUserProfile = async (req, res) => {
     }
 };
 
+// @desc    Create Guest User
+// @route   POST /api/auth/guest
+// @access  Public
+const guestLogin = async (req, res) => {
+    try {
+        const randomId = Math.floor(10000 + Math.random() * 90000);
+        const username = `Guest Agent ${randomId}`;
+        const email = `guest_${randomId}_${Date.now()}@temp.com`;
+        const password = Math.random().toString(36).slice(-8);
+
+        const user = await User.create({
+            username,
+            email,
+            password
+        });
+
+        if (user) {
+            req.session.userId = user._id;
+            req.session.username = user.username;
+            req.session.isAdmin = false;
+
+            res.status(201).json({
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                isAdmin: false,
+                isGuest: true
+            });
+        } else {
+            res.status(400).json({ message: 'Failed to initialize guest session' });
+        }
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Server error during guest login' });
+    }
+};
+
 module.exports = {
     loginUser,
     registerUser,
     logoutUser,
-    getUserProfile
+    getUserProfile,
+    guestLogin
 };
