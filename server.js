@@ -11,10 +11,13 @@ const connectDB = require('./src/config/db');
 
 const app = express();
 
-// Middleware
+// Trust Proxy (Required for Vercel/Heroku/AWS to pass cookies securely)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 // Dynamic CORS for production and local
 const allowedOrigins = ['http://localhost:3000', 'https://comic-slash.vercel.app'];
