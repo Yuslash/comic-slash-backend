@@ -183,7 +183,25 @@ const updateChapter = async (req, res) => {
         if (req.body.coverImageId) chapter.coverImageId = req.body.coverImageId;
     }
 
-    const updatedChapter = await chapter.save();
+    // Use findOneAndUpdate to bypass VersionError (Optimistic Concurrency) during rapid auto-saves
+    // We already validated ownership above.
+    const updatePayload = {};
+    if (data) updatePayload.data = data;
+    if (title) updatePayload.title = title;
+    if (coverImage) {
+        updatePayload.coverImage = coverImage;
+        if (req.body.coverImageId) updatePayload.coverImageId = req.body.coverImageId;
+    }
+
+    // Also update updatedAt on Series? Already handled in create, but maybe here too?
+    // Let's stick to updating the chapter safely.
+
+    const updatedChapter = await Chapter.findByIdAndUpdate(
+        req.params.id,
+        { $set: updatePayload },
+        { new: true } // Return updated doc
+    );
+
     res.json(updatedChapter);
 };
 
