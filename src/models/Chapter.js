@@ -25,6 +25,13 @@ const chapterSchema = mongoose.Schema({
     data: {
         type: Array, // Array of Scenes
         default: []
+    },
+    published: {
+        type: Boolean,
+        default: false
+    },
+    password: {
+        type: String
     }
 }, {
     timestamps: true,

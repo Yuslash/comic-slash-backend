@@ -16,6 +16,9 @@ const getSeries = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized' });
         }
         query.user = req.session.userId;
+    } else {
+        // Public view: only published series
+        query.published = true;
     }
 
     // Basic logic for "popular" (could be view count based later)
@@ -45,7 +48,8 @@ const createSeries = async (req, res) => {
         author,
         description,
         tags,
-        coverImage
+        coverImage,
+        published: false
     });
 
     res.status(201).json(series);
@@ -57,6 +61,11 @@ const createSeries = async (req, res) => {
 const getSeriesById = async (req, res) => {
     const series = await Series.findById(req.params.id).populate('user', 'username');
     if (series) {
+        // If not checking "mine", ensure it is published or user is owner
+        const isOwner = req.session.userId && series.user._id.toString() === req.session.userId;
+        if (!series.published && !isOwner) {
+            return res.status(404).json({ message: 'Series not found or unpublished' });
+        }
         res.json(series);
     } else {
         res.status(404).json({ message: 'Series not found' });
@@ -75,7 +84,7 @@ const updateSeries = async (req, res) => {
         return res.status(403).json({ message: 'Not authorized' });
     }
 
-    const { title, description, coverImage, coverImageId, status, tags } = req.body;
+    const { title, description, coverImage, coverImageId, status, tags, published } = req.body;
 
     if (title) series.title = title;
     if (description) series.description = description;
@@ -99,25 +108,16 @@ const updateSeries = async (req, res) => {
                     imagekit.listFiles({
                         searchQuery: `name="${fileName}"`
                     }, function (error, result) {
-                        if (!error && result && result.length > 0) {
-                            // Found it! Delete the first match (most likely the one)
-                            // Ideally check folder path too, but name is practically unique per upload now
+                        if (error) console.log("Legacy delete failed:", error);
+                        else if (result && result.length > 0) {
                             const fileId = result[0].fileId;
-                            console.log(`[Series Update] Found legacy file ${fileName} with ID ${fileId}. Deleting...`);
-                            imagekit.deleteFile(fileId, function (err, res) {
-                                if (err) console.log("Legacy delete failed:", err);
-                                else console.log("Legacy delete success");
-                            });
-                        } else {
-                            console.log("[Series Update] Could not find legacy file to delete:", fileName);
+                            imagekit.deleteFile(fileId, function (err, res) { });
                         }
                     });
                 }
             } catch (e) {
                 console.log("[Series Update] Error parsing legacy URL:", e);
             }
-        } else {
-            console.log(`[Series Update] No old image ID to delete or ID unchanged. Existing: ${series.coverImageId}, New: ${coverImageId}`);
         }
         series.coverImage = coverImage;
         if (coverImageId) series.coverImageId = coverImageId;
@@ -125,6 +125,7 @@ const updateSeries = async (req, res) => {
 
     if (status) series.status = status;
     if (tags) series.tags = tags;
+    if (typeof published !== 'undefined') series.published = published;
 
     const updatedSeries = await series.save();
     res.json(updatedSeries);

@@ -26,6 +26,10 @@ const seriesSchema = mongoose.Schema({
         type: String,
         enum: ['ongoing', 'completed', 'hiatus'],
         default: 'ongoing'
+    },
+    published: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true,
